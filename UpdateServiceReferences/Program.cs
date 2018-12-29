@@ -11,50 +11,46 @@ namespace UpdateServiceReferences
     {
         static void Main(string[] args)
         {
-            int counter = 1;
-            string line;
+            E2Bouquet originalBouquet = new E2Bouquet(@"C:\Users\prosa\Desktop\test-iptv-references\original-bouquet.tv");
+            E2Bouquet uniqueReferencesBouquet = originalBouquet.GetUniqueReferencesBouquet();
 
-            // Read the file and display it line by line.  
-            System.IO.StreamReader file =
-                new System.IO.StreamReader(@"C:\Users\prosa\Desktop\test-iptv-references\channels.tv");
+            Program.createBouquetFile(uniqueReferencesBouquet, @"C:\Users\prosa\Desktop\test-iptv-references\modified-bouquet.tv");
+            Program.createCustomChannelsFile(uniqueReferencesBouquet, @"C:\Users\prosa\Desktop\test-iptv-references\custom.channels.xml");
+        }
 
+        private static void createCustomChannelsFile(E2Bouquet bouquet, string filename)
+        {
             StringBuilder sb = new StringBuilder();
+            sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            sb.AppendLine("<channels>");
 
-            StringBuilder customChannels = new StringBuilder();
-            customChannels.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-            customChannels.AppendLine("<channels>");
-
-            while ((line = file.ReadLine()) != null)
+            foreach (TVService tvService in bouquet.Services.Values)
             {
-                if (line.StartsWith("#SERVICE"))
-                {
-                    string service = line.Replace("4097:0:1:0:0:0:0:0:0:0:", String.Format("4097:0:1:{0}:0:0:0:0:0:0:", counter.ToString("X")));
-                    sb.AppendLine(service);
-
-                    string description = file.ReadLine();
-                    sb.AppendLine(description);
-
-                    string epgLine = String.Format("<channel id=\"REPLACEME\">{0}</channel><!-- {1} -->", service.Substring(9), description.Substring(13));
-                    customChannels.AppendLine(epgLine);
-
-                    counter++;
-                }
+                sb.AppendLine(String.Format("<channel id=\"REPLACEME\">{0}</channel><!-- {1} -->", tvService.ServiceReference + ":http%3a//example.com", tvService.Description));
             }
 
-            file.Close();
+            sb.AppendLine("</channels>");
 
-            using (System.IO.StreamWriter newFile =
-            new System.IO.StreamWriter(@"C:\Users\prosa\Desktop\test-iptv-references\channels2.tv", true))
+            using (System.IO.StreamWriter fileWriter = new System.IO.StreamWriter(filename, true))
             {
-                newFile.Write(sb.ToString());
+                fileWriter.Write(sb.ToString());
+            }
+        }
+
+        private static void createBouquetFile(E2Bouquet bouquet, string filename)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine(String.Format("NAME {0}", bouquet.Name));
+
+            foreach (TVService tvService in bouquet.Services.Values)
+            {
+                sb.AppendLine(String.Format("#SERVICE {0}:{1}", tvService.ServiceReference, tvService.Url));
+                sb.AppendLine(String.Format("#DESCRIPTION {0}", tvService.Description));
             }
 
-            customChannels.AppendLine("</channels>");
-
-            using (System.IO.StreamWriter epgFile =
-            new System.IO.StreamWriter(@"C:\Users\prosa\Desktop\test-iptv-references\custom.channels.xml", true))
+            using (System.IO.StreamWriter fileWriter = new System.IO.StreamWriter(filename, true))
             {
-                epgFile.Write(customChannels.ToString());
+                fileWriter.Write(sb.ToString());
             }
         }
     }
